@@ -15,7 +15,7 @@
    * ※ GASデプロイ後にここにURLを貼り付けてください
    * 例: 'https://script.google.com/macros/s/XXXX/exec'
    */
-  const GAS_URL = '';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbz8qjI6MSbdnyGZot70LCWl3PCkfszePXrbOyb_Y0hRH2KBvpNne8zpvfdXcn8gYyn-/exec';
 
   /** ローカルストレージキー */
   const STORAGE_KEY = 'ifJuku_reservations';
