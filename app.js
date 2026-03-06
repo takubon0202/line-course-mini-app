@@ -25,6 +25,7 @@
   const modalOverlay = document.getElementById('modal-overlay');
   const modalMessage = document.getElementById('modal-message');
   const modalCloseBtn = document.getElementById('modal-close-btn');
+  const modalGcalBtn = document.getElementById('modal-gcal-btn');
   const submitBtn = document.getElementById('submit-btn');
 
   // --- 初期化 ---
@@ -208,6 +209,10 @@
     // モーダル表示
     const dateFormatted = formatDate(reservation.date);
     modalMessage.textContent = `${reservation.name}様の見学予約を受け付けました。\n${dateFormatted} ${reservation.time}〜`;
+
+    // Googleカレンダー追加ボタンのURL設定
+    modalGcalBtn.href = buildGoogleCalendarUrl(reservation);
+
     showModal();
 
     // バッジ更新
@@ -283,6 +288,17 @@
           </span>
         </div>
         ${r.memo ? `<div class="card-memo">${escapeHtml(r.memo)}</div>` : ''}
+        <a class="card-gcal-btn" href="${buildGoogleCalendarUrl(r)}" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="12" y1="14" x2="12" y2="18"/>
+            <line x1="10" y1="16" x2="14" y2="16"/>
+          </svg>
+          Googleカレンダーに追加
+        </a>
       </div>
     `).join('');
 
@@ -353,6 +369,27 @@
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // --- Googleカレンダー URL生成 ---
+  function buildGoogleCalendarUrl(reservation) {
+    const dateStr = reservation.date.replace(/-/g, '');
+    const timeParts = reservation.time.split(':');
+    const startHour = parseInt(timeParts[0], 10);
+    const startMin = timeParts[1] || '00';
+    const endHour = startHour + 1;
+
+    const startTime = `${dateStr}T${String(startHour).padStart(2, '0')}${startMin}00`;
+    const endTime = `${dateStr}T${String(endHour).padStart(2, '0')}${startMin}00`;
+
+    const title = encodeURIComponent(`【if(塾)】見学予約 - ${reservation.name}様`);
+    const details = encodeURIComponent(
+      `見学者: ${reservation.name}\n時間: ${reservation.time}〜` +
+      (reservation.memo ? `\nメモ: ${reservation.memo}` : '')
+    );
+    const location = encodeURIComponent('if(塾)');
+
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startTime}/${endTime}&details=${details}&location=${location}&ctz=Asia/Tokyo`;
   }
 
   // --- 起動 ---
