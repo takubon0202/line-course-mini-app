@@ -1,14 +1,41 @@
 /* ============================================
    if(塾) 見学予約アプリ - メインスクリプト
+   GAS (Google Apps Script) 連携対応版
    ============================================ */
 
 (function () {
   'use strict';
 
-  // --- ストレージキー ---
+  // ============================================
+  // 設定
+  // ============================================
+
+  /**
+   * GAS Web App のデプロイURL
+   * ※ GASデプロイ後にここにURLを貼り付けてください
+   * 例: 'https://script.google.com/macros/s/XXXX/exec'
+   */
+  const GAS_URL = '';
+
+  /** ローカルストレージキー */
   const STORAGE_KEY = 'ifJuku_reservations';
 
-  // --- DOM要素取得 ---
+  /** 静的フォールバック用スロット */
+  const FALLBACK_SLOTS = [
+    { time: '10:00', available: true, label: '10:00' },
+    { time: '11:00', available: true, label: '11:00' },
+    { time: '13:00', available: true, label: '13:00' },
+    { time: '14:00', available: true, label: '14:00' },
+    { time: '15:00', available: true, label: '15:00' },
+    { time: '16:00', available: true, label: '16:00' },
+    { time: '17:00', available: true, label: '17:00' },
+    { time: '18:00', available: true, label: '18:00' },
+  ];
+
+  // ============================================
+  // DOM要素取得
+  // ============================================
+
   const tabButtons = document.querySelectorAll('.tab-btn');
   const panels = document.querySelectorAll('.tab-panel');
   const form = document.getElementById('reservation-form');
@@ -27,17 +54,46 @@
   const modalCloseBtn = document.getElementById('modal-close-btn');
   const modalGcalBtn = document.getElementById('modal-gcal-btn');
   const submitBtn = document.getElementById('submit-btn');
+  const connectionStatus = document.getElementById('connection-status');
 
-  // --- 初期化 ---
+  // ============================================
+  // 初期化
+  // ============================================
+
   function init() {
     setupDateConstraints();
     setupTabs();
     setupForm();
     setupModal();
     renderReservations();
+    updateConnectionStatus();
   }
 
-  // --- 日付制約: 今日以降のみ選択可 ---
+  // ============================================
+  // 接続ステータス
+  // ============================================
+
+  function updateConnectionStatus() {
+    if (!connectionStatus) return;
+    if (GAS_URL) {
+      connectionStatus.className = 'connection-badge connected';
+      connectionStatus.innerHTML = `
+        <span class="status-dot"></span>
+        <span>カレンダー連携中</span>
+      `;
+    } else {
+      connectionStatus.className = 'connection-badge offline';
+      connectionStatus.innerHTML = `
+        <span class="status-dot"></span>
+        <span>オフラインモード</span>
+      `;
+    }
+  }
+
+  // ============================================
+  // 日付制約: 今日以降のみ選択可
+  // ============================================
+
   function setupDateConstraints() {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -45,7 +101,6 @@
     const dd = String(today.getDate()).padStart(2, '0');
     inputDate.min = `${yyyy}-${mm}-${dd}`;
 
-    // 3ヶ月先まで
     const maxDate = new Date(today);
     maxDate.setMonth(maxDate.getMonth() + 3);
     const maxYyyy = maxDate.getFullYear();
@@ -54,17 +109,18 @@
     inputDate.max = `${maxYyyy}-${maxMm}-${maxDd}`;
   }
 
-  // --- タブ切り替え ---
+  // ============================================
+  // タブ切り替え
+  // ============================================
+
   function setupTabs() {
     tabButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const targetTab = btn.dataset.tab;
 
-        // タブボタンのアクティブ状態
         tabButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        // パネル表示切り替え
         panels.forEach(panel => {
           panel.classList.remove('active');
           if (panel.id === `panel-${targetTab}`) {
@@ -72,7 +128,6 @@
           }
         });
 
-        // 一覧タブに切り替え時はリフレッシュ
         if (targetTab === 'list') {
           renderReservations();
         }
@@ -80,25 +135,111 @@
     });
   }
 
-  // --- フォームセットアップ ---
+  // ============================================
+  // フォームセットアップ
+  // ============================================
+
   function setupForm() {
-    // リアルタイムバリデーション: フォーカスアウト時
     inputName.addEventListener('blur', () => validateField('name'));
     inputDate.addEventListener('blur', () => validateField('date'));
-    inputDate.addEventListener('change', () => validateField('date'));
+    inputDate.addEventListener('change', handleDateChange);
     inputTime.addEventListener('blur', () => validateField('time'));
     inputTime.addEventListener('change', () => validateField('time'));
 
-    // エラー解除: 入力時
     inputName.addEventListener('input', () => clearError('name'));
     inputDate.addEventListener('input', () => clearError('date'));
     inputTime.addEventListener('input', () => clearError('time'));
 
-    // フォーム送信
     form.addEventListener('submit', handleSubmit);
   }
 
-  // --- バリデーション ---
+  // ============================================
+  // 日付変更 → 空き時間取得
+  // ============================================
+
+  async function handleDateChange() {
+    clearError('date');
+    const dateValue = inputDate.value;
+    if (!dateValue) return;
+
+    if (!validateField('date')) return;
+
+    if (GAS_URL) {
+      await fetchAvailableSlots(dateValue);
+    } else {
+      populateStaticSlots();
+    }
+  }
+
+  /**
+   * GASから空き時間スロットを取得
+   */
+  async function fetchAvailableSlots(dateStr) {
+    // ローディング表示
+    inputTime.innerHTML = '<option value="">読み込み中...</option>';
+    inputTime.disabled = true;
+    inputTime.classList.add('loading');
+
+    try {
+      const url = `${GAS_URL}?action=getSlots&date=${dateStr}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.success && data.slots) {
+        populateSlots(data.slots);
+      } else {
+        inputTime.innerHTML = '<option value="">取得エラー: ' + (data.error || '不明') + '</option>';
+      }
+    } catch (err) {
+      console.error('空き時間取得エラー:', err);
+      // フォールバック
+      populateStaticSlots();
+      inputTime.insertAdjacentHTML('afterbegin',
+        '<option value="" disabled>⚠ カレンダー接続エラー（静的リスト表示中）</option>');
+    } finally {
+      inputTime.disabled = false;
+      inputTime.classList.remove('loading');
+    }
+  }
+
+  /**
+   * スロットをselectに反映
+   */
+  function populateSlots(slots) {
+    const availableSlots = slots.filter(s => s.available);
+
+    if (availableSlots.length === 0) {
+      inputTime.innerHTML = '<option value="">この日は空きがありません</option>';
+      return;
+    }
+
+    let html = '<option value="">時間を選択してください</option>';
+    slots.forEach(slot => {
+      if (slot.available) {
+        html += `<option value="${slot.time}">🟢 ${slot.time}</option>`;
+      } else {
+        html += `<option value="" disabled>🔴 ${slot.time}（予約済み）</option>`;
+      }
+    });
+
+    inputTime.innerHTML = html;
+  }
+
+  /**
+   * 静的フォールバックスロット
+   */
+  function populateStaticSlots() {
+    let html = '<option value="">時間を選択してください</option>';
+    FALLBACK_SLOTS.forEach(slot => {
+      html += `<option value="${slot.time}">${slot.time}</option>`;
+    });
+    inputTime.innerHTML = html;
+  }
+
+  // ============================================
+  // バリデーション
+  // ============================================
+
   function validateField(field) {
     switch (field) {
       case 'name': {
@@ -153,7 +294,6 @@
     return results.every(Boolean);
   }
 
-  // --- エラー表示/解除 ---
   function showError(field, message) {
     const errorEl = document.getElementById(`error-${field}`);
     const inputEl = document.getElementById(`input-${field}`);
@@ -172,12 +312,14 @@
     inputEl.classList.remove('error');
   }
 
-  // --- フォーム送信 ---
-  function handleSubmit(e) {
+  // ============================================
+  // フォーム送信
+  // ============================================
+
+  async function handleSubmit(e) {
     e.preventDefault();
 
     if (!validateAll()) {
-      // 最初のエラーフィールドにフォーカス
       const firstError = form.querySelector('.form-input.error');
       if (firstError) {
         firstError.focus();
@@ -186,45 +328,86 @@
       return;
     }
 
-    // 送信中状態
+    // 送信中UI
     submitBtn.disabled = true;
+    submitBtn.querySelector('span').textContent = '送信中...';
+    submitBtn.classList.add('submitting');
 
-    const reservation = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    const reservationData = {
       name: inputName.value.trim(),
       date: inputDate.value,
       time: inputTime.value,
       memo: inputMemo.value.trim(),
-      createdAt: new Date().toISOString(),
     };
 
-    // 保存
+    let gasSuccess = false;
+
+    // GAS API へ送信
+    if (GAS_URL) {
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(reservationData),
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          gasSuccess = true;
+        } else {
+          // GASエラー（予約済みなど）
+          alert('⚠ ' + (result.error || '予約に失敗しました'));
+          submitBtn.disabled = false;
+          submitBtn.querySelector('span').textContent = '予約を送信する';
+          submitBtn.classList.remove('submitting');
+          // スロットをリロード
+          await fetchAvailableSlots(reservationData.date);
+          return;
+        }
+      } catch (err) {
+        console.error('GAS送信エラー:', err);
+        alert('⚠ サーバーとの通信に失敗しました。予約はローカルのみ保存されます。');
+      }
+    }
+
+    // ローカル保存
+    const reservation = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      ...reservationData,
+      createdAt: new Date().toISOString(),
+      synced: gasSuccess,
+    };
     saveReservation(reservation);
 
     // フォームリセット
     form.reset();
     setupDateConstraints();
+    populateStaticSlots();
     ['name', 'date', 'time'].forEach(clearError);
 
     // モーダル表示
     const dateFormatted = formatDate(reservation.date);
     modalMessage.textContent = `${reservation.name}様の見学予約を受け付けました。\n${dateFormatted} ${reservation.time}〜`;
 
-    // Googleカレンダー追加ボタンのURL設定
-    modalGcalBtn.href = buildGoogleCalendarUrl(reservation);
+    if (gasSuccess) {
+      modalMessage.textContent += '\n✅ Googleカレンダーに登録しました';
+    }
 
+    modalGcalBtn.href = buildGoogleCalendarUrl(reservation);
     showModal();
 
-    // バッジ更新
     updateBadge();
 
     // 送信ボタン復帰
-    setTimeout(() => {
-      submitBtn.disabled = false;
-    }, 500);
+    submitBtn.disabled = false;
+    submitBtn.querySelector('span').textContent = '予約を送信する';
+    submitBtn.classList.remove('submitting');
   }
 
-  // --- ストレージ操作 ---
+  // ============================================
+  // ストレージ操作
+  // ============================================
+
   function getReservations() {
     try {
       const data = localStorage.getItem(STORAGE_KEY);
@@ -245,7 +428,10 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(reservations));
   }
 
-  // --- 予約一覧レンダリング ---
+  // ============================================
+  // 予約一覧レンダリング
+  // ============================================
+
   function renderReservations() {
     const reservations = getReservations();
 
@@ -261,7 +447,10 @@
     reservationList.innerHTML = reservations.map((r, index) => `
       <div class="reservation-card" data-id="${r.id}" style="animation-delay: ${index * 0.06}s">
         <div class="card-header">
-          <span class="card-name">${escapeHtml(r.name)}</span>
+          <span class="card-name">
+            ${escapeHtml(r.name)}
+            ${r.synced ? '<span class="synced-badge" title="カレンダー連携済み">✅</span>' : ''}
+          </span>
           <button class="delete-btn" data-id="${r.id}" aria-label="削除" title="この予約を削除">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
@@ -302,7 +491,6 @@
       </div>
     `).join('');
 
-    // 削除ボタンイベント
     reservationList.querySelectorAll('.delete-btn').forEach(btn => {
       btn.addEventListener('click', handleDelete);
     });
@@ -310,7 +498,10 @@
     updateBadge();
   }
 
-  // --- 削除処理 ---
+  // ============================================
+  // 削除処理
+  // ============================================
+
   function handleDelete(e) {
     const btn = e.currentTarget;
     const id = btn.dataset.id;
@@ -325,7 +516,10 @@
     }, 400);
   }
 
-  // --- バッジ更新 ---
+  // ============================================
+  // バッジ更新
+  // ============================================
+
   function updateBadge() {
     const count = getReservations().length;
     if (count > 0) {
@@ -336,7 +530,10 @@
     }
   }
 
-  // --- モーダル ---
+  // ============================================
+  // モーダル
+  // ============================================
+
   function setupModal() {
     modalCloseBtn.addEventListener('click', hideModal);
     modalOverlay.addEventListener('click', (e) => {
@@ -354,7 +551,10 @@
     document.body.style.overflow = '';
   }
 
-  // --- ユーティリティ ---
+  // ============================================
+  // ユーティリティ
+  // ============================================
+
   function formatDate(dateStr) {
     const date = new Date(dateStr + 'T00:00:00');
     const year = date.getFullYear();
@@ -371,7 +571,6 @@
     return div.innerHTML;
   }
 
-  // --- Googleカレンダー URL生成 ---
   function buildGoogleCalendarUrl(reservation) {
     const dateStr = reservation.date.replace(/-/g, '');
     const timeParts = reservation.time.split(':');
@@ -392,7 +591,10 @@
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startTime}/${endTime}&details=${details}&location=${location}&ctz=Asia/Tokyo`;
   }
 
-  // --- 起動 ---
+  // ============================================
+  // 起動
+  // ============================================
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

@@ -23,6 +23,10 @@
         <img src="assets/logo.png" alt="if(塾) ロゴ" class="logo-img">
       </div>
       <p class="header-subtitle">見学予約受付</p>
+      <div class="connection-badge offline" id="connection-status">
+        <span class="status-dot"></span>
+        <span>オフラインモード</span>
+      </div>
     </div>
     <div class="header-glow"></div>
   </header>
@@ -116,15 +120,7 @@
             <span class="required-badge">必須</span>
           </label>
           <select id="input-time" class="form-input form-select" required>
-            <option value="">時間を選択してください</option>
-            <option value="10:00">10:00</option>
-            <option value="11:00">11:00</option>
-            <option value="13:00">13:00</option>
-            <option value="14:00">14:00</option>
-            <option value="15:00">15:00</option>
-            <option value="16:00">16:00</option>
-            <option value="17:00">17:00</option>
-            <option value="18:00">18:00</option>
+            <option value="">まず日付を選択してください</option>
           </select>
           <p class="error-message" id="error-time"></p>
         </div>

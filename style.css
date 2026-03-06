@@ -111,6 +111,112 @@ body::before {
   margin-top: 4px;
 }
 
+/* --- 接続ステータスバッジ --- */
+.connection-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.connection-badge.connected {
+  background: rgba(6, 199, 85, 0.12);
+  border: 1px solid rgba(6, 199, 85, 0.3);
+  color: var(--color-primary);
+}
+
+.connection-badge.offline {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.connected .status-dot {
+  background: var(--color-primary);
+  box-shadow: 0 0 6px var(--color-primary);
+  animation: pulse 2s infinite;
+}
+
+.offline .status-dot {
+  background: #fbbf24;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* --- ローディング状態 --- */
+.form-input.loading {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2306C755' stroke-width='2'%3E%3Cpath d='M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  animation: spinBg 1s linear infinite;
+}
+
+@keyframes spinBg {
+  from {
+    filter: hue-rotate(0deg);
+  }
+
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* --- 送信中ボタン --- */
+.submit-btn.submitting {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.submit-btn.submitting::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-50%);
+  }
+
+  to {
+    transform: translateX(50%);
+  }
+}
+
+/* --- カレンダー連携済みバッジ --- */
+.synced-badge {
+  font-size: 0.75rem;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 .header-glow {
   position: absolute;
   bottom: -1px;
