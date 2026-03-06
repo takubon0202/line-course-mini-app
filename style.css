@@ -69,7 +69,7 @@ body::before {
   width: 200%;
   height: 200%;
   background: radial-gradient(circle at 30% 20%, rgba(6, 199, 85, 0.06) 0%, transparent 50%),
-              radial-gradient(circle at 70% 80%, rgba(59, 130, 246, 0.04) 0%, transparent 50%);
+    radial-gradient(circle at 70% 80%, rgba(59, 130, 246, 0.04) 0%, transparent 50%);
   z-index: -1;
   pointer-events: none;
 }
@@ -91,37 +91,16 @@ body::before {
 
 .logo {
   display: inline-flex;
-  align-items: baseline;
-  gap: 2px;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 4px;
 }
 
-.logo-bracket {
-  font-family: var(--font-mono);
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--color-primary);
-  text-shadow: 0 0 20px var(--color-primary-glow);
-}
-
-.logo-text {
-  font-family: var(--font-mono);
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin: 0 2px;
-}
-
-.logo-label {
-  font-family: var(--font-sans);
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--color-primary);
-  margin-left: 4px;
-  padding: 2px 8px;
-  background: var(--color-success-bg);
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(6, 199, 85, 0.2);
+.logo-img {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
 }
 
 .header-subtitle {
@@ -229,6 +208,7 @@ body::before {
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -334,6 +314,13 @@ body::before {
   padding-right: 40px;
 }
 
+/* ネイティブドロップダウンの文字色修正（LINE内ブラウザ対応） */
+.form-select option {
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 8px 12px;
+}
+
 .form-textarea {
   resize: vertical;
   min-height: 80px;
@@ -389,7 +376,7 @@ body::before {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
   transition: left 0.5s ease;
 }
 
@@ -449,6 +436,7 @@ body::before {
     opacity: 0;
     transform: translateY(8px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -623,9 +611,11 @@ body::before {
     transform: scale(0);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.2);
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -694,9 +684,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 ::-webkit-scrollbar {
   width: 4px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 4px;
@@ -704,9 +696,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* --- ユーティリティアニメーション --- */
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-6px); }
-  40%, 80% { transform: translateX(6px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
 }
 
 .shake {
@@ -718,12 +722,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .main-content {
     padding: 16px 12px 32px;
   }
+
   .form-input {
     padding: 12px 14px;
     font-size: 0.95rem;
   }
-  .logo-bracket, .logo-text {
-    font-size: 1.7rem;
+
+  .logo-img {
+    height: 44px;
   }
 }
 
